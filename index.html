@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Harvest Church — Attendance</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#C8950A;--gold-light:#F5E6B3;--gold-dark:#8A6500;
+  --green:#1A5C2E;--green-light:#E8F5EE;--green-mid:#2D7A45;
+  --bg:#F7F5F0;--surface:#FFFFFF;--text:#1A1A1A;--muted:#6B6560;
+  --border:#E0DBD0;--danger:#C0392B;--danger-bg:#FDECEA;
+  --success:#1A5C2E;--success-bg:#E8F5EE;
+  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.nav{background:var(--green);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.nav-brand{color:#fff;font-size:15px;font-weight:bold;}
+.nav-brand span{color:var(--gold-light);}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{background:transparent;border:none;color:rgba(255,255,255,0.65);font-family:Georgia,serif;font-size:13px;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all .2s;}
+.nav-tab.active,.nav-tab:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.page{display:none;padding:1.5rem;max-width:960px;margin:0 auto;}
+.page.active{display:block;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow);}
+.card-title{font-size:15px;font-weight:bold;color:var(--green);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';display:inline-block;width:3px;height:16px;background:var(--gold);border-radius:2px;}
+.field{margin-bottom:1rem;}
+label{display:block;font-size:12px;font-weight:bold;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:Arial,sans-serif;}
+input[type=text],input[type=datetime-local],input[type=password],select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:Arial,sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--green);}
+textarea{resize:vertical;min-height:70px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border:none;border-radius:8px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;cursor:pointer;transition:all .18s;}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-primary:hover{background:var(--green-mid);}
+.btn-gold{background:var(--gold);color:#fff;}
+.btn-gold:hover{background:var(--gold-dark);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{background:var(--bg);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+@media(max-width:600px){.grid-2{grid-template-columns:1fr;}.nav-brand{font-size:12px;}.nav-tab{font-size:11px;padding:5px 8px;}}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;}
+.badge-open{background:var(--success-bg);color:var(--success);}
+.badge-closed{background:#F0EFEB;color:var(--muted);}
+.badge-gold{background:var(--gold-light);color:var(--gold-dark);}
+.event-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;}
+.event-row:last-child{border-bottom:none;}
+.event-name{font-size:14px;font-weight:bold;}
+.event-meta{font-size:12px;color:var(--muted);font-family:Arial,sans-serif;margin-top:2px;}
+.event-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;}
+/* MODAL — uses normal flow wrapper, not fixed */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;justify-content:center;align-items:center;padding:1rem;}
+.modal-backdrop.open{display:flex;}
+.modal-box{background:#fff;border-radius:14px;padding:2rem;width:100%;max-width:400px;text-align:center;position:relative;}
+.modal-title{font-size:17px;font-weight:bold;color:var(--green);margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:1.25rem;font-family:Arial,sans-serif;}
+#qr-canvas-wrap{display:flex;justify-content:center;margin:1rem 0;}
+#qr-canvas-wrap canvas{border-radius:8px;border:4px solid var(--gold-light);}
+.countdown{font-size:18px;font-weight:bold;font-family:Arial,sans-serif;}
+.countdown.urgent{color:var(--danger);}
+.countdown.ok{color:var(--green);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;}
+th{background:var(--green);color:#fff;padding:9px 12px;text-align:left;font-size:12px;font-weight:bold;}
+td{padding:8px 12px;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tr:nth-child(even){background:var(--bg);}
+.signin-page{min-height:100vh;background:linear-gradient(160deg,var(--green) 0%,#0F3D20 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.signin-card{background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,0.25);}
+.church-logo{text-align:center;margin-bottom:1.5rem;}
+.church-logo .cross{font-size:32px;color:var(--gold);}
+.church-logo h1{font-size:18px;font-weight:bold;color:var(--green);line-height:1.2;}
+.church-logo p{font-size:12px;color:var(--muted);font-family:Arial,sans-serif;}
+.signin-event{background:var(--green-light);border-radius:8px;padding:10px 14px;margin-bottom:1.25rem;text-align:center;}
+.signin-event-name{font-size:15px;font-weight:bold;color:var(--green);}
+.signin-event-meta{font-size:12px;color:var(--muted);font-family:Arial,sans-serif;}
+.closed-banner{background:var(--danger-bg);border:1px solid #F5C6C2;border-radius:8px;padding:14px;text-align:center;color:var(--danger);margin-bottom:1rem;font-family:Arial,sans-serif;font-size:14px;}
+.success-banner{background:var(--success-bg);border:1px solid #B5D9C2;border-radius:8px;padding:14px;text-align:center;color:var(--success);margin-bottom:1rem;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;}
+.name-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;}
+.name-btn{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 14px;text-align:left;cursor:pointer;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;transition:all .15s;display:flex;align-items:center;gap:8px;width:100%;}
+.name-btn:hover{background:var(--green-light);border-color:var(--green);color:var(--green);}
+.name-btn.signed{background:var(--success-bg);border-color:var(--green);color:var(--green);cursor:default;}
+.name-btn .tick{display:none;}
+.name-btn.signed .tick{display:inline;}
+.search-box{margin-bottom:10px;}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1rem;}
+.login-card{background:#fff;border-radius:14px;padding:2.5rem 2rem;width:100%;max-width:360px;box-shadow:var(--shadow);text-align:center;border:1px solid var(--border);}
+.login-card h2{font-size:20px;color:var(--green);margin-bottom:4px;}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:1.5rem;font-family:Arial,sans-serif;}
+.error-msg{color:var(--danger);font-family:Arial,sans-serif;font-size:13px;margin-top:8px;}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;}
+.stat-num{font-size:26px;font-weight:bold;color:var(--green);}
+.stat-label{font-size:11px;color:var(--muted);font-family:Arial,sans-serif;text-transform:uppercase;letter-spacing:.4px;}
+.worker-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-family:Arial,sans-serif;font-size:13px;margin:3px;}
+.worker-tag button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 0 0 2px;}
+.worker-tag button:hover{color:var(--danger);}
+.admin-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-family:Arial,sans-serif;font-size:14px;}
+.admin-row:last-child{border-bottom:none;}
+.flex-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.mt1{margin-top:1rem;}
+.text-muted{color:var(--muted);font-family:Arial,sans-serif;font-size:13px;}
+.divider{border:none;border-top:1px solid var(--border);margin:1rem 0;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div style="font-size:36px;color:var(--gold);margin-bottom:8px;">✝</div>
+    <h2>Global Harvest Church</h2>
+    <p>Maryland, Lagos — Admin Portal</p>
+    <div class="field" style="text-align:left;">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" autocomplete="username"/>
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;" onclick="doLogin()">Sign In</button>
+    <div class="error-msg hidden" id="login-err">Invalid username or password.</div>
+    <hr class="divider" style="margin-top:1.25rem;">
+    <p style="font-size:11px;color:var(--muted);font-family:Arial,sans-serif;">Default: <strong>admin</strong> / church2024 &nbsp;|&nbsp; <strong>pastor</strong> / harvest99</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+  <nav class="nav">
+    <div class="nav-brand">✝ Global Harvest <span>Maryland</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('events',this)">Events</button>
+      <button class="nav-tab" onclick="showPage('workers',this)">Workers</button>
+      <button class="nav-tab" onclick="showPage('records',this)">Records</button>
+      <button class="nav-tab" onclick="showPage('admins',this)">Admins</button>
+      <button class="nav-tab" onclick="doLogout()" style="color:rgba(255,255,255,0.4);">Logout</button>
+    </div>
+  </nav>
+
+  <!-- EVENTS -->
+  <div class="page active" id="page-events">
+    <div class="card">
+      <div class="card-title">Create New Event</div>
+      <div class="grid-2">
+        <div class="field"><label>Event Name</label><input type="text" id="evt-name" placeholder="e.g. Sunday Service, Workers Meeting"/></div>
+        <div class="field"><label>Event Date &amp; Start Time</label><input type="datetime-local" id="evt-date"/></div>
+        <div class="field"><label>Attendance Closes At</label><input type="datetime-local" id="evt-close"/></div>
+        <div class="field"><label>Department / Group (optional)</label><input type="text" id="evt-dept" placeholder="e.g. Choir, Ushers, All Workers"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="createEvent()">+ Generate QR Code</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Events</div>
+      <div id="event-list"><p class="text-muted">No events yet. Create one above.</p></div>
+    </div>
+  </div>
+
+  <!-- WORKERS -->
+  <div class="page" id="page-workers">
+    <div class="card">
+      <div class="card-title">Add Worker</div>
+      <div class="flex-row">
+        <input type="text" id="w-name" placeholder="Full name" style="flex:1;min-width:160px;max-width:240px;"/>
+        <input type="text" id="w-role" placeholder="Role (e.g. Usher, Choir)" style="flex:1;min-width:140px;max-width:200px;"/>
+        <button class="btn btn-primary" onclick="addWorker()">Add</button>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <div class="card-title">All Workers (<span id="worker-count">0</span>)</div>
+        <div id="worker-tags"><p class="text-muted">No workers yet.</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Bulk Import</div>
+      <p class="text-muted" style="margin-bottom:8px;">One name per line. Add role after comma: <em>John Adeyemi, Usher</em></p>
+      <textarea id="bulk-names" placeholder="John Adeyemi, Usher&#10;Grace Okafor, Choir&#10;Emmanuel Nwosu, Media"></textarea>
+      <button class="btn btn-outline mt1" onclick="bulkImport()">Import Names</button>
+    </div>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="page" id="page-records">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num" id="s-events">0</div><div class="stat-label">Events</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-signins">0</div><div class="stat-label">Sign-ins</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-workers">0</div><div class="stat-label">Workers</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Filter &amp; Export</div>
+      <div class="flex-row">
+        <select id="filter-evt" style="flex:1;max-width:320px;" onchange="renderAttendanceTable()"><option value="">All Events</option></select>
+        <button class="btn btn-gold" onclick="exportCSV()">↓ Export CSV</button>
+      </div>
+      <p class="text-muted" style="margin-top:10px;font-size:12px;">Google Sheets: Export CSV → open Google Sheets → File → Import → Upload CSV.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Attendance Records</div>
+      <div class="table-wrap" id="attendance-table"><p class="text-muted">No records yet.</p></div>
+    </div>
+  </div>
+
+  <!-- ADMINS -->
+  <div class="page" id="page-admins">
+    <div class="card">
+      <div class="card-title">Add Admin</div>
+      <div class="flex-row">
+        <input type="text" id="a-user" placeholder="Username" style="flex:1;max-width:200px;"/>
+        <input type="password" id="a-pass" placeholder="Password (min 6 chars)" style="flex:1;max-width:220px;"/>
+        <button class="btn btn-primary" onclick="addAdmin()">Add Admin</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Current Admins</div>
+      <div id="admin-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- QR MODAL -->
+<div class="modal-backdrop" id="qr-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="qr-evt-name"></div>
+    <div class="modal-sub" id="qr-evt-date"></div>
+    <div id="qr-canvas-wrap"></div>
+    <div id="qr-status" class="countdown ok">—</div>
+    <p class="text-muted" style="font-size:12px;margin:10px 0 16px;">Workers scan this with their phone camera to sign attendance</p>
+    <div class="flex-row" style="justify-content:center;">
+      <button class="btn btn-gold" onclick="printQR()">Print QR</button>
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGN-IN PAGE (shown when ?event=ID in URL) -->
+<div class="signin-page hidden" id="signin-page">
+  <div class="signin-card">
+    <div class="church-logo">
+      <div class="cross">✝</div>
+      <h1>Global Harvest Church</h1>
+      <p>Maryland, Lagos</p>
+    </div>
+    <div class="signin-event">
+      <div class="signin-event-name" id="si-event-name">Loading…</div>
+      <div class="signin-event-meta" id="si-event-meta"></div>
+    </div>
+    <div id="si-closed" class="closed-banner hidden"><strong>Attendance Closed</strong><br>The sign-in window for this event has ended.</div>
+    <div id="si-success" class="success-banner hidden"></div>
+    <div id="si-body">
+      <div class="search-box"><input type="text" id="si-search" placeholder="Search your name…" oninput="filterNames()"/></div>
+      <div class="name-list" id="name-list"></div>
+      <p class="text-muted" style="margin-top:10px;font-size:11px;text-align:center;">Tap your name to mark your attendance</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SELF-CONTAINED QR CODE GENERATOR
+     Based on qrcode-generator by Kazuhiko Arase (MIT License)
+     No CDN or internet connection required.
+════════════════════════════════════════════════════════════ -->
+<script>
+var qrcode=function(){var a=function(){var a=function(a){this.typeNumber=a;this.moduleCount=0;this.modules=null;this.dataCache=null;this.dataList=[]};a.prototype={addData:function(a){var b=new l(a);this.dataList.push(b);this.dataCache=null},isDark:function(a,b){if(a<0||this.moduleCount<=a||b<0||this.moduleCount<=b)throw new Error(a+","+b);return this.modules[a][b]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(a,c){this.moduleCount=4*this.typeNumber+17;this.modules=function(a){var b=new Array(a);for(var c=0;c<a;c++){b[c]=new Array(a);for(var d=0;d<a;d++)b[c][d]=null}return b}(this.moduleCount);this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(a,c);if(this.typeNumber>=7)this.setupTypeNumber(a);if(this.dataCache==null)this.dataCache=o(this.typeNumber,this.errorCorrectLevel,this.dataList);var b=new p(this.dataCache);this.mapData(b,c)},setupPositionProbePattern:function(a,b){for(var c=-1;c<=7;c++){if(a+c<=-1||this.moduleCount<=a+c)continue;for(var d=-1;d<=7;d++){if(b+d<=-1||this.moduleCount<=b+d)continue;if(0<=c&&c<=6&&d==0||0<=c&&c<=6&&d==6||c==0&&0<=d&&d<=6||c==6&&0<=d&&d<=6||2<=c&&c<=4&&2<=d&&d<=4)this.modules[a+c][b+d]=!0;else this.modules[a+c][b+d]=!1}}},getBestMaskPattern:function(){var a=0,b=0;for(var c=0;c<8;c++){this.makeImpl(!0,c);var d=e.getLostPoint(this);if(c==0||a>d){a=d;b=c}}return b},setupTimingPattern:function(){for(var a=8;a<this.moduleCount-8;a++){if(this.modules[a][6]!=null)continue;this.modules[a][6]=a%2==0}for(var b=8;b<this.moduleCount-8;b++){if(this.modules[6][b]!=null)continue;this.modules[6][b]=b%2==0}},setupPositionAdjustPattern:function(){var a=d.getPatternPosition(this.typeNumber);for(var b=0;b<a.length;b++){for(var c=0;c<a.length;c++){var e=a[b],f=a[c];if(this.modules[e][f]!=null)continue;for(var g=-2;g<=2;g++){for(var h=-2;h<=2;h++){if(g==-2||g==2||h==-2||h==2||g==0&&h==0)this.modules[e+g][f+h]=!0;else this.modules[e+g][f+h]=!1}}}}},setupTypeNumber:function(a){var b=e.getBCHTypeNumber(this.typeNumber),c;for(c=0;c<18;c++){var d=!a&&(b>>c&1)==1;this.modules[Math.floor(c/3)][c%3+this.moduleCount-8-3]=d}for(c=0;c<18;c++){var d=!a&&(b>>c&1)==1;this.modules[c%3+this.moduleCount-8-3][Math.floor(c/3)]=d}},setupTypeInfo:function(a,b){var c=this.errorCorrectLevel<<3|b,d=e.getBCHTypeInfo(c);for(var f=0;f<15;f++){var g=!a&&(d>>f&1)==1;if(f<6)this.modules[f][8]=g;else if(f<8)this.modules[f+1][8]=g;else this.modules[this.moduleCount-15+f][8]=g}for(var f=0;f<15;f++){var g=!a&&(d>>f&1)==1;if(f<8)this.modules[8][this.moduleCount-f-1]=g;else if(f<9)this.modules[8][15-f-1+1]=g;else this.modules[8][15-f-1]=g}this.modules[this.moduleCount-8][8]=!a},mapData:function(a,b){var c=-1,d=this.moduleCount-1,f=7,g=0;for(var h=this.moduleCount-1;h>0;h-=2){if(h==6)h--;while(!0){for(var i=0;i<2;i++){if(this.modules[d][h-i]==null){var j=!1;if(g<a.getLength())j=(a.get(g)>>f&1)==1;var k=e.getMask(b,d,h-i);if(k)j=!j;this.modules[d][h-i]=j;f--;if(f==-1){g++;f=7}}}d+=c;if(d<0||this.moduleCount<=d){d-=c;c=-c;break}}}}};a.PAD0=0xEC;a.PAD1=0x11;a.createData=function(b,c,d){var f=s.getRSBlocks(b,c),g=new n;for(var h=0;h<d.length;h++){var i=d[h];g.put(i.getMode(),4);g.put(i.getLength(),e.getLengthInBits(i.getMode(),b));i.write(g)}var j=0;for(var h=0;h<f.length;h++)j+=f[h].dataCount;if(g.getLengthInBits()>8*j)throw new Error("code length overflow. ("+g.getLengthInBits()+">"+8*j+")");if(g.getLengthInBits()+4<=8*j)g.put(0,4);while(g.getLengthInBits()%8!=0)g.putBit(!1);while(!0){if(g.getLengthInBits()>=8*j)break;g.put(a.PAD0,8);if(g.getLengthInBits()>=8*j)break;g.put(a.PAD1,8)}return o(b,c,f,g)};return a}();var e=function(){var a={};a.getBCHTypeInfo=function(a){var b=a<<10;while(e(b)>=0)b^=f(e(b));return(a<<10|b)^21522};a.getBCHTypeNumber=function(a){var b=a<<12;while(e(b)>=0)b^=f(e(b));return a<<12|b};function e(a){var b=0;while(a>>b+1>0)b++;return b}function f(a){return[77,26,412,37,51,91,785,437,517,1093,773,585,862,639,1093,738,1085,1130,985,1220][e(a)-10]}a.getPatternPosition=function(a){return[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]][a-1]};a.getMask=function(a,b,c){switch(a){case 0:return(b+c)%2==0;case 1:return b%2==0;case 2:return c%3==0;case 3:return(b+c)%3==0;case 4:return(Math.floor(b/2)+Math.floor(c/3))%2==0;case 5:return b*c%2+b*c%3==0;case 6:return(b*c%2+b*c%3)%2==0;case 7:return(b*c%3+(b+c)%2)%2==0}throw new Error("bad maskPattern:"+a)};a.getErrorCorrectPolynomial=function(a){var b=new r([1],0);for(var c=0;c<a;c++)b=b.multiply(new r([1,i.gexp(c)],0));return b};a.getLengthInBits=function(a,b){if(1<=b&&b<10){switch(a){case 1:return 10;case 2:return 9;case 4:return 8;case 8:return 8;default:throw new Error("mode:"+a)}}else if(b<27){switch(a){case 1:return 12;case 2:return 11;case 4:return 16;case 8:return 10;default:throw new Error("mode:"+a)}}else if(b<41){switch(a){case 1:return 14;case 2:return 13;case 4:return 16;case 8:return 12;default:throw new Error("mode:"+a)}}else throw new Error("type:"+b)};a.getLostPoint=function(a){var b=a.getModuleCount(),c=0;for(var d=0;d<b;d++){for(var e=0;e<b;e++){var f=0,g=a.isDark(d,e);for(var h=-1;h<=1;h++){if(d+h<0||b<=d+h)continue;for(var i=-1;i<=1;i++){if(e+i<0||b<=e+i)continue;if(h==0&&i==0)continue;if(g==a.isDark(d+h,e+i))f++}}if(f>=5)c+=3+(f-5)}}for(var d=0;d<b-1;d++){for(var e=0;e<b-1;e++){var j=0;if(a.isDark(d,e))j++;if(a.isDark(d+1,e))j++;if(a.isDark(d,e+1))j++;if(a.isDark(d+1,e+1))j++;if(j==0||j==4)c+=3}}for(var d=0;d<b;d++){for(var e=0;e<b-6;e++){if(a.isDark(d,e)&&!a.isDark(d,e+1)&&a.isDark(d,e+2)&&a.isDark(d,e+3)&&a.isDark(d,e+4)&&!a.isDark(d,e+5)&&a.isDark(d,e+6))c+=40}}for(var e=0;e<b;e++){for(var d=0;d<b-6;d++){if(a.isDark(d,e)&&!a.isDark(d+1,e)&&a.isDark(d+2,e)&&a.isDark(d+3,e)&&a.isDark(d+4,e)&&!a.isDark(d+5,e)&&a.isDark(d+6,e))c+=40}}var k=0;for(var e=0;e<b;e++){for(var d=0;d<b;d++){if(a.isDark(d,e))k++}}var l=Math.abs(100*k/b/b-50)/5;c+=10*l;return c};return a}();var d=function(){var a={};a.getPatternPosition=function(a){return e.getPatternPosition(a)};return a}();var i=function(){var a={};var b=[];var c=[];var d=256;for(var e=0;e<d;e++){b[e]=e<8?1<<e:b[e-4]^b[e-5]^b[e-6]^b[e-8];c[b[e]]=e}a.glog=function(a){if(a<1)throw new Error("glog("+a+")");return c[a]};a.gexp=function(a){while(a<0)a+=255;while(a>=256)a-=255;return b[a]};return a}();var r=function(){function a(a,b){this.num=new Array(a.length+b);for(var c=0;c<this.num.length;c++)this.num[c]=0;for(var c=0;c<a.length;c++)this.num[c+b]=a[c]}a.prototype={get:function(a){return this.num[this.num.length-1-a]},getLength:function(){return this.num.length},multiply:function(b){var c=new Array(this.getLength()+b.getLength()-1);for(var d=0;d<c.length;d++)c[d]=0;for(var d=0;d<this.getLength();d++){for(var e=0;e<b.getLength();e++){c[d+e]^=i.gexp(i.glog(this.get(d))+i.glog(b.get(e)))}}return new a(c,0)},mod:function(b){if(this.getLength()-b.getLength()<0)return this;var c=i.glog(this.get(this.getLength()-1))-i.glog(b.get(b.getLength()-1));var d=new Array(this.getLength());for(var e=0;e<this.getLength();e++)d[e]=this.get(e);for(var e=0;e<b.getLength();e++){d[e+this.getLength()-b.getLength()]^=i.gexp(i.glog(b.get(e))+c)}return new a(d,0).mod(b)}};return a}();var s=function(){var a={};var b=function(a,b){this.totalCount=a;this.dataCount=b};a.RS_BLOCK_TABLE=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]];a.getRSBlocks=function(c,d){var e=a.getRsBlockTable(c,d);if(e==undefined)throw new Error("bad rs block @ typeNumber:"+c+"/errorCorrectLevel:"+d);var f=e.length/3;var g=[];for(var h=0;h<f;h++){var i=e[h*3+0],j=e[h*3+1],k=e[h*3+2];for(var l=0;l<i;l++)g.push(new b(j,k))}return g};a.getRsBlockTable=function(a,b){switch(b){case 1:return a.RS_BLOCK_TABLE[(a-1)*4+0];case 0:return a.RS_BLOCK_TABLE[(a-1)*4+1];case 3:return a.RS_BLOCK_TABLE[(a-1)*4+2];case 2:return a.RS_BLOCK_TABLE[(a-1)*4+3]}throw new Error("bad errorCorrectLevel:"+b)};return a}();var n=function(){this.buffer=[];this.length=0};n.prototype={get:function(a){var b=Math.floor(a/8);return((this.buffer[b]>>>(7-a%8))&1)==1},put:function(a,b){for(var c=0;c<b;c++)this.putBit((a>>>(b-c-1)&1)==1)},getLengthInBits:function(){return this.length},putBit:function(a){var b=Math.floor(this.length/8);if(this.buffer.length<=b)this.buffer.push(0);if(a)this.buffer[b]|=0x80>>>(this.length%8);this.length++}};function o(a,b,c,d){var e=new r(e.getErrorCorrectPolynomial(function(a,b){var c=0;for(var d=0;d<b.length;d++){c+=b[d].totalCount-b[d].dataCount}return c}(0,s.getRSBlocks(a,b))),0);// simplified
+var f=s.getRSBlocks(a,b);var g=new n;if(d){// use passed bit buffer
+for(var h=0;h<d.buffer.length;h++)g.buffer.push(d.buffer[h]);g.length=d.length}var i=[];var j=[];var k=0;for(var l=0;l<f.length;l++){var m=f[l];var p=[];for(var q=0;q<m.dataCount;q++){if(k<g.getLengthInBits()){var t=0;for(var u=0;u<8&&k<g.getLengthInBits();u++){t|=(g.get(k)?1:0)<<(7-u);k++}p.push(t)}else p.push(0)}i.push(p);var v=m.totalCount-m.dataCount;var w=e.getErrorCorrectPolynomial(v);var x=new r(p,w.getLength()-1);var y=x.mod(w);var z=[];for(var q=0;q<w.getLength()-1;q++){var A=q+y.getLength()-w.getLength()+1;z.push(A>=0?y.get(A):0)}j.push(z)}var B=0;for(var l=0;l<i.length;l++)B+=i[l].length;var C=new Array(B+function(a){var b=0;for(var c=0;c<a.length;c++)b+=a[c].length;return b}(j));var D=0;var E=Math.max.apply(null,i.map(function(a){return a.length}));for(var F=0;F<E;F++){for(var l=0;l<i.length;l++){if(F<i[l].length)C[D++]=i[l][F]}}var G=Math.max.apply(null,j.map(function(a){return a.length}));for(var F=0;F<G;F++){for(var l=0;l<j.length;l++){if(F<j[l].length)C[D++]=j[l][F]}}return C}var p=function(a){this.buffer=a;this.length=a.length*8};p.prototype={get:function(a){var b=Math.floor(a/8);return((this.buffer[b]>>>(7-a%8))&1)==1},getLength:function(){return this.length}};var l=function(a){this.data=a};l.prototype={getMode:function(){return 4},getLength:function(){return this.data.length},write:function(a){for(var b=0;b<this.data.length;b++){var c=this.data.charCodeAt(b);a.put(c,8)}}};return{createCanvas:function(url,size,dark,light){var q=new a(0);q.errorCorrectLevel=1;q.addData(url);q.make();var n=q.getModuleCount();var canvas=document.createElement('canvas');canvas.width=canvas.height=size;var ctx=canvas.getContext('2d');var cell=size/n;ctx.fillStyle=light||'#fff';ctx.fillRect(0,0,size,size);ctx.fillStyle=dark||'#000';for(var r=0;r<n;r++){for(var c=0;c<n;c++){if(q.isDark(r,c)){ctx.fillRect(Math.round(c*cell),Math.round(r*cell),Math.ceil(cell),Math.ceil(cell))}}}return canvas}}}();
+</script>
+
+<!-- APP LOGIC -->
+<script>
+var state={
+  admins:{admin:'church2024',pastor:'harvest99'},
+  workers:[
+    {id:'w1',name:'John Adeyemi',role:'Usher'},
+    {id:'w2',name:'Grace Okafor',role:'Choir'},
+    {id:'w3',name:'Emmanuel Nwosu',role:'Media'},
+    {id:'w4',name:'Blessing Eze',role:'Children'},
+    {id:'w5',name:'Samuel Adebayo',role:'Security'}
+  ],
+  events:[],
+  attendance:[]
+};
+
+var currentUser=null,qrInterval=null,currentQREvent=null,currentSignInEvent=null;
+
+function save(){try{localStorage.setItem('ghc_v3',JSON.stringify(state));}catch(e){}}
+function load(){try{var d=localStorage.getItem('ghc_v3');if(d){var p=JSON.parse(d);state.admins=p.admins||state.admins;state.workers=p.workers||state.workers;state.events=p.events||state.events;state.attendance=p.attendance||state.attendance;}}catch(e){}}
+load();
+
+function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(iso){if(!iso)return'';var d=new Date(iso);return d.toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});}
+
+// AUTH
+function doLogin(){
+  var u=document.getElementById('login-user').value.trim();
+  var p=document.getElementById('login-pass').value;
+  if(state.admins[u]&&state.admins[u]===p){
+    currentUser=u;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    renderAll();
+  }else{
+    document.getElementById('login-err').classList.remove('hidden');
+  }
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').classList.add('hidden');
+}
+document.getElementById('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('login-user').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+
+// NAV
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='records')renderRecords();
+  if(name==='admins')renderAdmins();
+}
+
+// EVENTS
+function createEvent(){
+  var name=document.getElementById('evt-name').value.trim();
+  var date=document.getElementById('evt-date').value;
+  var close=document.getElementById('evt-close').value;
+  var dept=document.getElementById('evt-dept').value.trim();
+  if(!name){alert('Please enter an event name.');return;}
+  if(!date){alert('Please set the event start date and time.');return;}
+  if(!close){alert('Please set the attendance closing time.');return;}
+  if(new Date(close)<=new Date(date)){alert('Closing time must be after the start time.');return;}
+  var evt={id:uid(),name:name,date:date,close:close,dept:dept,createdBy:currentUser,createdAt:new Date().toISOString()};
+  state.events.unshift(evt);
+  save();
+  renderEventList();
+  openQR(evt.id);
+  document.getElementById('evt-name').value='';
+  document.getElementById('evt-dept').value='';
+}
+
+function renderEventList(){
+  var el=document.getElementById('event-list');
+  if(!state.events.length){el.innerHTML='<p class="text-muted">No events yet. Create one above.</p>';return;}
+  el.innerHTML=state.events.map(function(e){
+    var open=new Date()<new Date(e.close);
+    var count=state.attendance.filter(function(a){return a.eventId===e.id;}).length;
+    var dept=e.dept?(' <span class="badge badge-gold" style="font-size:10px;">'+esc(e.dept)+'</span>'):'';
+    return '<div class="event-row"><div style="flex:1;min-width:0;">'
+      +'<div class="event-name">'+esc(e.name)+dept+'</div>'
+      +'<div class="event-meta">'+fmtDate(e.date)+' — Closes: '+fmtDate(e.close)+' — '+count+' sign-in'+(count!==1?'s':'')+'</div>'
+      +'</div><div class="event-actions">'
+      +'<span class="badge '+(open?'badge-open':'badge-closed')+'">'+(open?'Open':'Closed')+'</span>'
+      +'<button class="btn btn-outline btn-sm" onclick="openQR(\''+e.id+'\')">View QR</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="deleteEvent(\''+e.id+'\')" style="color:var(--danger);border-color:var(--danger);">Delete</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+function deleteEvent(id){
+  if(!confirm('Delete this event and all its attendance records?'))return;
+  state.events=state.events.filter(function(e){return e.id!==id;});
+  state.attendance=state.attendance.filter(function(a){return a.eventId!==id;});
+  save();renderEventList();
+}
+
+// QR CODE — uses built-in self-contained generator, no CDN
+function openQR(eventId){
+  currentQREvent=state.events.find(function(e){return e.id===eventId;});
+  if(!currentQREvent)return;
+  document.getElementById('qr-modal').classList.add('open');
+  document.getElementById('qr-evt-name').textContent=currentQREvent.name;
+  document.getElementById('qr-evt-date').textContent=fmtDate(currentQREvent.date)+(currentQREvent.dept?' · '+currentQREvent.dept:'');
+  var wrap=document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML='';
+  var url=window.location.href.split('?')[0]+'?event='+currentQREvent.id;
+  try{
+    var canvas=qrcode.createCanvas(url,220,'#1A5C2E','#FFFFFF');
+    wrap.appendChild(canvas);
+  }catch(e){
+    wrap.innerHTML='<p style="color:var(--danger);font-family:Arial,sans-serif;font-size:13px;">Could not generate QR. URL may be too long.</p>';
+    console.error('QR error:',e);
+  }
+  startCountdown();
+}
+
+function startCountdown(){
+  if(qrInterval)clearInterval(qrInterval);
+  updateCountdown();
+  qrInterval=setInterval(updateCountdown,1000);
+}
+function updateCountdown(){
+  if(!currentQREvent)return;
+  var el=document.getElementById('qr-status');
+  var diff=new Date(currentQREvent.close)-new Date();
+  if(diff<=0){el.textContent='Attendance is now closed';el.className='countdown urgent';clearInterval(qrInterval);return;}
+  var h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  el.textContent='Closes in '+(h?h+'h ':'')+m+'m '+s+'s';
+  el.className='countdown '+(diff<300000?'urgent':'ok');
+}
+function closeModal(){
+  document.getElementById('qr-modal').classList.remove('open');
+  if(qrInterval)clearInterval(qrInterval);
+}
+function printQR(){
+  var canvas=document.querySelector('#qr-canvas-wrap canvas');
+  if(!canvas){alert('QR code not ready yet.');return;}
+  var src=canvas.toDataURL();
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>QR - '+currentQREvent.name+'</title>'
+    +'<style>body{text-align:center;font-family:Georgia,serif;padding:40px;}h2{color:#1A5C2E;}p{font-size:13px;color:#666;margin:6px 0;}img{margin:16px auto;display:block;border:4px solid #F5E6B3;border-radius:8px;}</style></head><body>'
+    +'<h2>Global Harvest Church Maryland</h2><h3>'+esc(currentQREvent.name)+'</h3>'
+    +'<p>'+fmtDate(currentQREvent.date)+(currentQREvent.dept?' &middot; '+esc(currentQREvent.dept):'')+'</p>'
+    +'<img src="'+src+'" width="240" height="240"/>'
+    +'<p><strong>Scan to sign your attendance</strong></p>'
+    +'<p>Closes: '+fmtDate(currentQREvent.close)+'</p>'
+    +'<script>window.onload=function(){window.print();}<\/script>'
+    +'</body></html>');
+  w.document.close();
+}
+
+// WORKERS
+function addWorker(){
+  var name=document.getElementById('w-name').value.trim();
+  var role=document.getElementById('w-role').value.trim();
+  if(!name){alert('Please enter a name.');return;}
+  if(state.workers.some(function(w){return w.name.toLowerCase()===name.toLowerCase();})){alert('Worker already exists.');return;}
+  state.workers.push({id:uid(),name:name,role:role});
+  save();renderWorkers();
+  document.getElementById('w-name').value='';
+  document.getElementById('w-role').value='';
+  document.getElementById('w-name').focus();
+}
+function bulkImport(){
+  var lines=document.getElementById('bulk-names').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var added=0,skipped=0;
+  lines.forEach(function(line){
+    var parts=line.split(',');
+    var name=parts[0].trim();
+    var role=parts[1]?parts[1].trim():'';
+    if(!name)return;
+    if(state.workers.some(function(w){return w.name.toLowerCase()===name.toLowerCase();})){skipped++;return;}
+    state.workers.push({id:uid(),name:name,role:role});
+    added++;
+  });
+  save();renderWorkers();
+  document.getElementById('bulk-names').value='';
+  alert('Done! '+added+' worker(s) imported.'+(skipped?' '+skipped+' duplicate(s) skipped.':''));
+}
+function removeWorker(id){
+  var w=state.workers.find(function(x){return x.id===id;});
+  if(!confirm('Remove '+(w?w.name:'this worker')+'?'))return;
+  state.workers=state.workers.filter(function(x){return x.id!==id;});
+  save();renderWorkers();
+}
+function renderWorkers(){
+  document.getElementById('worker-count').textContent=state.workers.length;
+  var el=document.getElementById('worker-tags');
+  if(!state.workers.length){el.innerHTML='<p class="text-muted">No workers yet.</p>';return;}
+  var sorted=[].concat(state.workers).sort(function(a,b){return a.name.localeCompare(b.name);});
+  el.innerHTML=sorted.map(function(w){
+    return '<span class="worker-tag"><strong>'+esc(w.name)+'</strong>'+(w.role?' &middot; '+esc(w.role):'')+' <button onclick="removeWorker(\''+w.id+'\')" title="Remove">&#215;</button></span>';
+  }).join('');
+}
+
+// ADMINS
+function addAdmin(){
+  var u=document.getElementById('a-user').value.trim();
+  var p=document.getElementById('a-pass').value;
+  if(!u||!p){alert('Enter both username and password.');return;}
+  if(u.length<3){alert('Username must be at least 3 characters.');return;}
+  if(p.length<6){alert('Password must be at least 6 characters.');return;}
+  state.admins[u]=p;save();renderAdmins();
+  document.getElementById('a-user').value='';document.getElementById('a-pass').value='';
+}
+function removeAdmin(u){
+  if(u===currentUser){alert('You cannot remove your own account.');return;}
+  if(Object.keys(state.admins).length<=1){alert('Must keep at least one admin.');return;}
+  if(!confirm('Remove admin "'+u+'"?'))return;
+  delete state.admins[u];save();renderAdmins();
+}
+function renderAdmins(){
+  document.getElementById('admin-list').innerHTML=Object.keys(state.admins).map(function(u){
+    return '<div class="admin-row"><div><strong>'+esc(u)+'</strong>'+(u===currentUser?' <span class="badge badge-open" style="font-size:10px;">you</span>':'')+'</div>'
+      +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="removeAdmin(\''+u+'\')">Remove</button></div>';
+  }).join('');
+}
+
+// RECORDS
+function renderRecords(){
+  document.getElementById('s-events').textContent=state.events.length;
+  document.getElementById('s-signins').textContent=state.attendance.length;
+  document.getElementById('s-workers').textContent=state.workers.length;
+  var sel=document.getElementById('filter-evt');
+  var cur=sel.value;
+  sel.innerHTML='<option value="">All Events</option>'+state.events.map(function(e){
+    return '<option value="'+e.id+'">'+esc(e.name)+' ('+fmtDate(e.date)+')</option>';
+  }).join('');
+  if(cur)sel.value=cur;
+  renderAttendanceTable();
+}
+function renderAttendanceTable(){
+  var f=document.getElementById('filter-evt').value;
+  var records=f?state.attendance.filter(function(a){return a.eventId===f;}):state.attendance;
+  var el=document.getElementById('attendance-table');
+  if(!records.length){el.innerHTML='<p class="text-muted" style="padding:1rem 0;">No records found.</p>';return;}
+  el.innerHTML='<table><thead><tr><th>#</th><th>Worker</th><th>Role</th><th>Event</th><th>Dept</th><th>Sign-in Time</th></tr></thead><tbody>'
+    +records.map(function(a,i){
+      var evt=state.events.find(function(e){return e.id===a.eventId;});
+      return '<tr><td>'+(i+1)+'</td><td><strong>'+esc(a.workerName)+'</strong></td><td>'+esc(a.workerRole||'—')+'</td>'
+        +'<td>'+(evt?esc(evt.name):'<em>Deleted</em>')+'</td>'
+        +'<td>'+(evt&&evt.dept?esc(evt.dept):'—')+'</td>'
+        +'<td>'+fmtDate(a.time)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function exportCSV(){
+  var f=document.getElementById('filter-evt').value;
+  var records=f?state.attendance.filter(function(a){return a.eventId===f;}):state.attendance;
+  if(!records.length){alert('No records to export.');return;}
+  var csv='Worker Name,Role,Event,Department,Sign-in Time\n'+records.map(function(a){
+    var evt=state.events.find(function(e){return e.id===a.eventId;});
+    return['"'+a.workerName+'"','"'+(a.workerRole||'')+'"','"'+(evt?evt.name:'Deleted')+'"','"'+(evt&&evt.dept?evt.dept:'')+'"','"'+fmtDate(a.time)+'"'].join(',');
+  }).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;
+  a.download='attendance_ghc.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+
+// SIGN-IN (worker-facing, loaded when ?event=ID in URL)
+function initSignIn(eventId){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('signin-page').classList.remove('hidden');
+  currentSignInEvent=state.events.find(function(e){return e.id===eventId;});
+  if(!currentSignInEvent){
+    document.getElementById('si-event-name').textContent='Event not found';
+    document.getElementById('si-event-meta').textContent='This QR code is invalid or the event was deleted.';
+    document.getElementById('si-body').classList.add('hidden');
+    return;
+  }
+  document.getElementById('si-event-name').textContent=currentSignInEvent.name;
+  document.getElementById('si-event-meta').textContent=fmtDate(currentSignInEvent.date)+(currentSignInEvent.dept?' · '+currentSignInEvent.dept:'');
+  if(new Date()>=new Date(currentSignInEvent.close)){
+    document.getElementById('si-closed').classList.remove('hidden');
+    document.getElementById('si-body').classList.add('hidden');
+    return;
+  }
+  renderNameList();
+  var remaining=new Date(currentSignInEvent.close)-new Date();
+  if(remaining>0)setTimeout(function(){
+    document.getElementById('si-closed').classList.remove('hidden');
+    document.getElementById('si-body').classList.add('hidden');
+  },remaining);
+}
+function renderNameList(){
+  var query=(document.getElementById('si-search').value||'').toLowerCase().trim();
+  var signed=state.attendance.filter(function(a){return a.eventId===currentSignInEvent.id;}).map(function(a){return a.workerId;});
+  var sorted=[].concat(state.workers).sort(function(a,b){return a.name.localeCompare(b.name);});
+  var filtered=query?sorted.filter(function(w){return w.name.toLowerCase().indexOf(query)>=0;}):sorted;
+  var el=document.getElementById('name-list');
+  if(!filtered.length){el.innerHTML='<p class="text-muted" style="padding:8px;text-align:center;">No worker found.</p>';return;}
+  el.innerHTML=filtered.map(function(w){
+    var isSigned=signed.indexOf(w.id)>=0;
+    return '<button class="name-btn'+(isSigned?' signed':'')+'" '
+      +(isSigned?'disabled':'onclick="signIn(\''+w.id+'\')"')+'>'
+      +'<span class="tick">&#10003;</span>'+esc(w.name)
+      +(w.role?'<span style="font-weight:400;color:var(--muted);font-size:12px;margin-left:auto;">'+esc(w.role)+'</span>':'')
+      +'</button>';
+  }).join('');
+}
+function filterNames(){if(currentSignInEvent)renderNameList();}
+function signIn(workerId){
+  if(!currentSignInEvent)return;
+  if(new Date()>=new Date(currentSignInEvent.close)){
+    document.getElementById('si-closed').classList.remove('hidden');
+    document.getElementById('si-body').classList.add('hidden');
+    return;
+  }
+  if(state.attendance.find(function(a){return a.workerId===workerId&&a.eventId===currentSignInEvent.id;}))return;
+  var worker=state.workers.find(function(w){return w.id===workerId;});
+  if(!worker)return;
+  state.attendance.push({id:uid(),workerId:workerId,workerName:worker.name,workerRole:worker.role,eventId:currentSignInEvent.id,time:new Date().toISOString()});
+  save();
+  var banner=document.getElementById('si-success');
+  banner.textContent='✓ '+worker.name+' — attendance recorded!';
+  banner.classList.remove('hidden');
+  setTimeout(function(){banner.classList.add('hidden');},3500);
+  renderNameList();
+}
+
+function renderAll(){renderEventList();renderWorkers();}
+
+// BOOT
+var params=new URLSearchParams(window.location.search);
+var evtParam=params.get('event');
+if(evtParam){initSignIn(evtParam);}
+</script>
+</body>
+</html>
